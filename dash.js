@@ -21,23 +21,23 @@ function vector(x,y){
     this.y=y;
 }
 
-function createObject(name,h,w,r,m,c,p){//for creating an object model(template)
+function createObject(name,w,h,r,m,c,p){//for creating an object model(template)
     this.name=name;
-    this.height=  h;
-    this.width = w;
+    this.size= new vector(w,h);
     this.mass=m;
     this.charge=c;
+    this.radius=0;
     this.poleStrength=p;
     this.velocity=new vector(0,0);
     this.angularVelocity=0;
     this.position=new vector(0,0);
     this.rotation=r;
-    this.center=new vector(this.position.x+this.width/2,this.position.y+this.height/2);
+    this.center=new vector(this.position.x+this.size.x/2,this.position.y+this.size.y/2);
     this.vertex=[
-        new vector(0,0),
-        new vector(0,0),
-        new vector(0,0),
-        new vector(0,0)
+        this.position,
+        new vector(this.position.x+this.size.x,this.position.y),
+        new vector(this.position.x+this.size.x,this.position.y+this.size.y),
+        new vector(this.position.x,this.position.y+this.size.y)
     ];
     
         
@@ -51,9 +51,23 @@ function distanceBetweenPoints(point1,point2){
 }
 
 function toRadians(x){
-    return x*Math.PI/180;
+    return x*Math.PI*1.0000000/180;
 }
 
+function magnitude(vec){
+    return Math.sqrt(vec.x**2+vec.y**2);
+}
+
+function vectorify(r,a){
+        let vect = new vector();
+        vect.x=r*Math.cos(a);
+        vect.y=r*Math.sin(a);
+        return vect;
+}
+
+function slope(one,two){
+    return (one.y-two.y)/(one.x-two.x);
+}
 
 function setScreenDimensions(x,y){
     screen.x=x;
@@ -82,11 +96,22 @@ function showAxis(){
     spawn(Yaxis,new coord(0,-500));
 }
 
+function collisionProtocol(i,j){
+    if(distanceBetweenPoints(objects[i].center,objects[j].center) == Math.floor(objects[i].radius+objects[j].radius)){
+        console.log(Math.floor(objects[i].radius+objects[j].radius));
+        
+        objects[i].velocity = new vector(-1*objects[i].velocity.x,-1*objects[i].velocity.y);
+        objects[j].velocity = new vector(-1*objects[j].velocity.x,-1*objects[j].velocity.y);
+        console.log(objects[i].velocity);
+    }
+}
+
+
 function frameControl(obj, cord, rot){//To spawn the object into the environment
     var node = document.createElement("div");
     node.setAttribute("class",obj.name);
     // console.log(obj.name);
-    node.setAttribute("style","position:absolute;background-color:black;height:"+obj.height+"px;width:"+obj.width+"px;top:"+(cord.y)+"px;left:"+(cord.x)+"px;transform:rotate("+rot+"deg);");//Setting style
+    node.setAttribute("style","position:absolute;border-radius:50%;background-color:black;height:"+obj.size.y+"px;width:"+obj.size.x+"px;top:"+(cord.y)+"px;left:"+(cord.x)+"px;transform:rotate("+rot+"deg);");//Setting style
     obj.position.x=cord.x;
     obj.position.y=cord.y;
     // console.log(node.attributes);
@@ -105,9 +130,11 @@ function spawn(obj, cord){//To spawn the object into the environment
     var node = document.createElement("div");
     node.setAttribute("class",obj.name);
     // console.log(obj.name);
-    node.setAttribute("style","position:absolute;background-color:black;height:"+obj.height+"px;width:"+obj.width+"px;top:"+(cord.y)+"px;left:"+(cord.x)+"px;transform:rotate("+obj.rotation+"deg);");//Setting style
+    node.setAttribute("style","position:absolute;border-radius:50%;background-color:black;height:"+obj.size.y+"px;width:"+obj.size.x+"px;top:"+(cord.y)+"px;left:"+(cord.x)+"px;transform:rotate("+obj.rotation+"deg);");//Setting style
     obj.position.x=cord.x;
     obj.position.y=cord.y;
+    obj.center.x+=cord.x;
+    obj.center.y+=cord.y;
     // console.log(node.attributes);
    
     //node.setAttribute("elem",{"class":obj.name,"style":"position:absolute;background-color:black;height:"+obj.height+"px;width:"+obj.width+"px;top:"+(cord.x-obj.width)+"px;left:"+(cord.y-obj.height)+"px;"});//Setting style
@@ -125,27 +152,32 @@ function time(){
     update();
     document.getElementById("world").textContent='';
 for(let i=0;i<objectCount;i++){
+    
+    for(let j=i;j<objectCount;j++){
+        if(j==i)continue;
+        
+        collisionProtocol(i,j);
+    }
         objects[i].position.x+=objects[i].velocity.x;
         objects[i].position.y+=objects[i].velocity.y;
         objects[i].center.x+=objects[i].velocity.x;
         objects[i].center.y+=objects[i].velocity.y;
         objects[i].rotation+=objects[i].angularVelocity;
-        // var temp = new coord(objects[i].velocity.x+objects[i].position.x,objects[i].velocity.y+objects[i].position.y);
-        var r=Math.acos((objects[i].vertex[0].x-objects[i].center.x)/root2a);
         
-        r+=toRadians(objects[i].angularVelocity);
-        objects[i].vertex=[
-        //     new vector(objects[i].center.x+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.cos(toRadians(180-r)),objects[i].center.y+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.sin(toRadians(180-r))),
-        //     new vector(objects[i].center.x+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.cos(toRadians(180+90-r)),objects[i].center.y+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.sin(toRadians(180+90-r))),
-        //     new vector(objects[i].center.x+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.cos(toRadians(180+180-r)),objects[i].center.y+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.sin(toRadians(180+180-r))),
-        //     new vector(objects[i].center.x+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.cos(toRadians(180+270-r)),objects[i].center.y+distanceBetweenPoints(objects[i].position,objects[i].center)*Math.sin(toRadians(180+270-r)))
-        // 
-        new vector(objects[i].center.x+root2a*Math.cos(toRadians((objects[i].rotation))),objects[i].center.y+root2a*Math.sin(toRadians((objects[i].rotation)))),
-        new vector(0,0),
-        new vector(0,0),
-        new vector(0,0),
-    ];
-            // console.log(r);
+        // var temp = new coord(objects[i].velocity.x+objects[i].position.x,objects[i].velocity.y+objects[i].position.y);
+        // var r=Math.acos((objects[i].vertex[0].x-objects[i].center.x)/root2a);
+        
+        // r+=toRadians(objects[i].angularVelocity);
+        // let radius = Math.sqrt(objects[i].size.x**2+objects[i].size.y**2);
+        // objects[i].vertex[0].x-=objects[i].center.x;
+        // objects[i].vertex[0].y-=objects[i].center.y;
+        // let theta=Math.acos((objects[i].vertex[0].x)*1.000000/radius);
+        // theta+=toRadians(objects[i].angularVelocity);
+        // objects[i].vertex[0].x=radius*Math.cos(theta);
+        // objects[i].vertex[0].y=radius*Math.sin(theta);
+        // objects[i].vertex[0].x+=objects[i].center.x;
+        // objects[i].vertex[0].y+=objects[i].center.y;
+        //     // console.log(r);
        
         // console.log(objects[i].center);
        
@@ -155,12 +187,12 @@ for(let i=0;i<objectCount;i++){
             cameraFollow(cameraFollowObject);
         }       // console.log(objects[i].name);
 }
-console.log(box.vertex[0]);
+    // console.log(box.vertex[0]);
 }
 
 
 var screen = {x:500,y:500};
-frameRate=1;
+frameRate=60;
 
 
 
